@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  /* Light mode tokens */
+  --color-bg: #F7F8FA;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F1F3F6;
+  --color-border: #E3E6EA;
+  --color-text-primary: #17191C;
+  --color-text-secondary: #626871;
+  --color-text-muted: #8A9098;
+  --color-primary: #3157D5;
+  --color-primary-hover: #2748B8;
+  --color-primary-soft: #EAF0FF;
+  --color-success: #18864B;
+  --color-success-soft: #E8F7EF;
+  --color-warning: #A86600;
+  --color-warning-soft: #FFF3D9;
+  --color-danger: #D63B3B;
+  --color-danger-soft: #FDECEC;
+}
+
+[data-theme="dark"] {
+  --color-bg: #0D0F12;
+  --color-surface: #15181D;
+  --color-surface-secondary: #1C2026;
+  --color-border: #292E36;
+  --color-text-primary: #F4F6F8;
+  --color-text-secondary: #A9AFB8;
+  --color-text-muted: #727984;
+  --color-primary: #6E8CFF;
+  --color-primary-hover: #829BFF;
+  --color-primary-soft: #182449;
+  --color-success: #3ACB7A;
+  --color-success-soft: #112B1E;
+  --color-warning: #E9A63A;
+  --color-warning-soft: #2B2010;
+  --color-danger: #FF6262;
+  --color-danger-soft: #2B1414;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+  }
+}
