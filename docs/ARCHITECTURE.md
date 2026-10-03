@@ -16,11 +16,11 @@ OrbitOS is a cloud-backed, multi-tenant business operating system. All business 
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Browser                                 │
 │  React 19 (Server Components + Client Components)               │
-│  TanStack Query (client-side cache for mutations/optimistic UI) │
+│  Optional client cache only when justified by measured need     │
 └────────────────────────────┬────────────────────────────────────┘
                              │ HTTPS
 ┌────────────────────────────▼────────────────────────────────────┐
-│                      Next.js 15 Server                          │
+│                    Next.js App Router                           │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
 │  │  Middleware   │  │ Server       │  │  API Routes           │  │
@@ -182,7 +182,7 @@ Responsible for:
 
 Rules:
 - Abstractions over concrete providers
-- Storage uses an interface so local filesystem can be swapped for S3
+- Storage uses Supabase Storage as the production file backend
 - Database schema is the source of truth for data structure
 
 ---
@@ -350,7 +350,7 @@ orbit-os/
 │   │
 │   ├── storage/
 │   │   ├── index.ts              # Storage interface
-│   │   ├── local.ts              # Local filesystem implementation
+│   │   ├── supabase.ts           # Supabase Storage implementation
 │   │   └── types.ts              # Storage types
 │   │
 │   └── utils/
@@ -1057,7 +1057,7 @@ OrbitOS does not expose a general REST API. All data access goes through server 
 
 ### 12.2 Client-Side
 
-- **TanStack Query:** Used sparingly for client-interactive patterns (e.g., search-as-you-type, infinite scroll). Default stale time: 30 seconds. Mutations invalidate related queries.
+- **Client caching:** Optional. Prefer Server Components, Server Actions, and Next.js revalidation; add a client cache only when the UX requires it.
 - **`useOptimistic`:** For UI patterns that benefit from instant feedback (status toggles, inline edits).
 
 ### 12.3 Database Optimization
@@ -1110,7 +1110,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   AUTH_SECRET: z.string().min(32),
   AUTH_URL: z.string().url(),
-  STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
+  STORAGE_PROVIDER: z.literal('supabase').default('supabase'),
   STORAGE_LOCAL_PATH: z.string().default('./uploads'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
@@ -1127,7 +1127,7 @@ Validated at startup. Missing or invalid env vars cause an immediate, clear erro
 
 | Choice | Why |
 |---|---|
-| **Next.js 15 App Router** | Server Components eliminate client-side data fetching boilerplate. Server actions provide type-safe mutations. Streaming SSR for fast initial load. |
+| **Next.js App Router** | Server Components reduce client-side data fetching; Server Actions handle mutations and streaming can support responsive loading. The version in package.json is authoritative. |
 | **React 19** | `useOptimistic`, `useFormStatus`, improved server component support. |
 | **TypeScript (strict)** | Compile-time safety for business logic. Shared types between client and server. |
 | **Tailwind CSS v4** | Utility-first styling with CSS custom properties for design tokens. No CSS-in-JS runtime cost. |
@@ -1135,7 +1135,7 @@ Validated at startup. Missing or invalid env vars cause an immediate, clear erro
 | **PostgreSQL** | ACID transactions, foreign keys, check constraints, full-text search, JSON columns. Production-grade. |
 | **Auth.js v5** | Battle-tested auth with session management, CSRF protection, multiple providers. |
 | **Zod** | Schema validation that works identically on client and server. Type inference. |
-| **TanStack Query** | Client-side cache management for interactive patterns. Not the primary data fetching layer. |
+| **Client caching** | Optional optimization only; not the primary data-fetching layer. |
 | **Lucide React** | Consistent, well-maintained icon set. Single stroke width. Tree-shakeable. |
 | **Recharts** | React-native charting. Composable. Good for business dashboards without excessive customization. |
 | **Vitest** | Fast, ESM-native, compatible with the TypeScript setup. |
