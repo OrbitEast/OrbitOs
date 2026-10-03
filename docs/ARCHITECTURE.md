@@ -2,13 +2,13 @@
 
 **Version:** 2.0
 **Status:** Build Reference
-**Stack:** Next.js 15 · React 19 · TypeScript · PostgreSQL · Drizzle ORM
+**Stack:** Next.js App Router · React 19 · TypeScript · PostgreSQL · Drizzle ORM
 
 ---
 
 ## 1. System Overview
 
-OrbitOS is a local-first, multi-tenant business operating system. All business logic runs server-side. The frontend is a Next.js App Router application that communicates with the database through server actions and a thin domain layer.
+OrbitOS is a cloud-backed, multi-tenant business operating system. All business logic runs server-side. The frontend is a Next.js App Router application that communicates with the database through server actions and a thin domain layer.
 
 ### High-Level Architecture
 
@@ -50,7 +50,7 @@ OrbitOS is a local-first, multi-tenant business operating system. All business l
 
 ```
 Browser GET /customers
-  → Next.js Middleware (verify session, resolve business_id)
+  → Next.js Middleware / server authorization (verify session, resolve business_id)
   → Server Component renders
     → calls db.query.customers.findMany({ where: { businessId } })
     → Drizzle generates SQL with business_id scope
@@ -438,7 +438,7 @@ Page (Server Component)
 
 ### 4.2 Client Mutation Path
 
-Client components submit mutations through server actions. TanStack Query manages optimistic updates and cache invalidation on the client side where needed.
+Client components submit mutations through server actions. Prefer Server Components, Server Actions, and Next.js revalidation for data flow. Add a client-side data cache only when a measured interaction requires it.
 
 ```
 Client Component
@@ -547,7 +547,7 @@ export async function listCustomers(businessId: string, opts: ListOptions) {
 }
 ```
 
-**Type safety** — the `businessId` parameter is not optional. Forgetting it is a compile error, not a runtime bug.
+**Tenant scope** — the `businessId` parameter is mandatory for business-scoped services. Database access must not silently fall back to an unscoped query.
 
 ### 5.3 Cross-Tenant Protection
 
@@ -570,7 +570,7 @@ if (!invoice) return notFound();  // 404, not 403 — don't leak existence
 
 ### 6.1 Authentication
 
-Auth.js (NextAuth v5) handles authentication.
+Auth.js (NextAuth) handles authentication; the installed package version in package.json is authoritative.
 
 ```
 Supported providers:
@@ -1085,44 +1085,20 @@ CREATE INDEX idx_customers_search ON customers USING gin(
 
 ### `.env.example`
 
-```bash
-# ─── Database ────────────────────────────────────────
-DATABASE_URL="postgresql://user:password@localhost:5432/orbitos"
+Use the actual project architecture as the source of truth.
 
-# ─── Authentication ──────────────────────────────────
-AUTH_SECRET="generate-a-strong-random-secret-here"
-AUTH_URL="http://localhost:3000"
-
-# Optional OAuth providers
-# GOOGLE_CLIENT_ID=""
-# GOOGLE_CLIENT_SECRET=""
-# GITHUB_CLIENT_ID=""
-# GITHUB_CLIENT_SECRET=""
-
-# ─── Storage ─────────────────────────────────────────
-STORAGE_PROVIDER="local"                    # "local" | "s3"
-STORAGE_LOCAL_PATH="./uploads"
-
-# S3 (when STORAGE_PROVIDER=s3)
-# S3_BUCKET=""
-# S3_REGION=""
-# S3_ACCESS_KEY=""
-# S3_SECRET_KEY=""
-# S3_ENDPOINT=""                            # For S3-compatible providers
-
-# ─── Application ─────────────────────────────────────
-NEXT_PUBLIC_APP_NAME="OrbitOS"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-NODE_ENV="development"
-
-# ─── Feature Flags ───────────────────────────────────
-FEATURE_AI_ASSISTANT="false"
-FEATURE_INTEGRATIONS="false"
-
-# ─── Development ─────────────────────────────────────
-SEED_ON_MIGRATE="false"                     # Auto-seed after migration in dev
-LOG_LEVEL="debug"                           # "debug" | "info" | "warn" | "error"
+```env
+DATABASE_URL=""
+AUTH_SECRET=""
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+NEXT_PUBLIC_SUPABASE_URL=""
+NEXT_PUBLIC_SUPABASE_ANON_KEY=""
+SUPABASE_SERVICE_ROLE_KEY=""
+NEXT_PUBLIC_APP_URL=""
 ```
+
+Never expose `DATABASE_URL`, `AUTH_SECRET`, or `SUPABASE_SERVICE_ROLE_KEY` to browser code.
 
 ### Environment Loading
 
