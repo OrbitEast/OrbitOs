@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import { consumeAuthRateLimit } from "@/lib/auth/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(getDb()),
@@ -18,7 +19,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         const email = String(credentials?.email ?? "").trim().toLowerCase();
         const password = String(credentials?.password ?? "");
-        if (!email || !password) return null;
+        if (!email || !password || password.length > 128) return null;
+        if (!(await consumeAuthRateLimit("login", email))) return null;
         const [user] = await getDb().select().from(users).where(eq(users.email, email)).limit(1);
         if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) return null;
         return { id: user.id, name: user.name, email: user.email, image: user.image };
