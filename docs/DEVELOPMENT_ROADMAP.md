@@ -8,7 +8,7 @@ This file defines **execution order and verification gates**. The product requir
 
 **Current phase:** Phase 1 — Foundation
 
-**Phase 0 baseline check:** Completed against `main` on 2026-10-03. Live Supabase project was also inspected: the database already contains the business, customer, vendor, item, invoice, payment, expense, stock, procurement, accounting, audit, and RLS foundations. The application repository is now being reconciled against that live schema instead of recreating it blindly.
+**Phase 0 baseline check:** Completed against `main` on 2026-10-03. Live Supabase project was also inspected: the database already contains the business, customer, vendor, item, invoice, payment, expense, stock, procurement, accounting, audit, and RLS foundations. The OrbitOS backend target is the dedicated Neon PostgreSQL project. The connected Supabase project previously inspected belongs to Orbit Bizzassist and must not be used for OrbitOS.
 
 **Important:** Status labels are evidence-based only. Do not mark a phase complete because files or routes exist.
 
@@ -50,8 +50,8 @@ Record:
 Implement and verify:
 
 - Drizzle database layer;
-- Supabase PostgreSQL connection;
-- schema/migrations;
+- Neon PostgreSQL connection;
+- schema/migrations managed as code with Drizzle;
 - environment configuration;
 - strict TypeScript configuration;
 - test/lint/typecheck/build scripts;
@@ -365,9 +365,9 @@ Run and fix:
 
 Finalize:
 
-- production Supabase configuration;
+- production Neon configuration;
 - migrations;
-- private storage;
+- private object storage;
 - environment variables;
 - deployment target compatible with the actual Next.js architecture;
 - production build;
