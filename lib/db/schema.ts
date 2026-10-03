@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   email: text("email").unique(),
   emailVerified: timestamp("email_verified", { withTimezone: true }),
   image: text("image"),
+  passwordHash: text("password_hash"),
 });
 
 export const accounts = pgTable(
@@ -151,7 +152,7 @@ export const items = pgTable(
     name: text("name").notNull(),
     itemType: text("item_type").notNull().default("product"),
     unit: text("unit").notNull().default("pcs"),
-    sellingPrice: numeric("selling_price", { precision: 18, scale: 2 }).notNull().default("0"),
+    sellingPrice: numeric("sale_price", { precision: 18, scale: 2 }).notNull().default("0"),
     purchasePrice: numeric("purchase_price", { precision: 18, scale: 2 }).notNull().default("0"),
     taxRate: numeric("tax_rate", { precision: 7, scale: 3 }).notNull().default("0"),
     openingStock: numeric("opening_stock", { precision: 18, scale: 3 }).notNull().default("0"),
