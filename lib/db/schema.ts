@@ -1,300 +1,145 @@
-import {
-  boolean,
-  date,
-  integer,
-  jsonb,
-  numeric,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { InferSelectModel } from "drizzle-orm";
+import { pgTable, text, numeric, timestamp, uuid, varchar, integer, boolean, pgEnum } from "drizzle-orm/pg-core";
 
-const timestamps = {
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-};
-
-export const authRateLimits = pgTable("auth_rate_limits", {
-  key: text("key").primaryKey(),
-  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull().defaultNow(),
-  attempts: integer("attempts").notNull().default(0),
-});
+export const roleEnum = pgEnum("role", ["owner", "admin", "staff"]);
+export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "active", "partial", "paid", "cancelled"]);
+export const paymentMethodEnum = pgEnum("payment_method", ["cash", "bank_transfer", "cheque", "upi", "credit_card"]);
 
 export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  name: text("name"),
-  email: text("email").unique(),
-  emailVerified: timestamp("email_verified", { withTimezone: true }),
-  image: text("image"),
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).unique().notNull(),
   passwordHash: text("password_hash"),
-});
-
-export const accounts = pgTable(
-  "accounts",
-  {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("provider_account_id").notNull(),
-    refreshToken: text("refresh_token"),
-    accessToken: text("access_token"),
-    expiresAt: integer("expires_at"),
-    tokenType: text("token_type"),
-    scope: text("scope"),
-    idToken: text("id_token"),
-    sessionState: text("session_state"),
-  },
-  (table) => [primaryKey({ columns: [table.provider, table.providerAccountId] })],
-);
-
-export const sessions = pgTable("sessions", {
-  sessionToken: text("session_token").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { withTimezone: true }).notNull(),
-});
-
-export const verificationTokens = pgTable(
-  "verification_tokens",
-  {
-    identifier: text("identifier").notNull(),
-    token: text("token").notNull(),
-    expires: timestamp("expires", { withTimezone: true }).notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.identifier, table.token] })],
-);
-
-export const authenticators = pgTable("authenticators", {
-  credentialId: text("credential_id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  providerAccountId: text("provider_account_id").notNull(),
-  credentialPublicKey: text("credential_public_key").notNull(),
-  counter: integer("counter").notNull(),
-  credentialDeviceType: text("credential_device_type").notNull(),
-  credentialBackedUp: boolean("credential_backed_up").notNull(),
-  transports: text("transports"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const businesses = pgTable("businesses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  legalName: text("legal_name"),
-  email: text("email"),
-  phone: text("phone"),
-  gstin: text("gstin"),
-  pan: text("pan"),
-  website: text("website"),
-  address: jsonb("address").notNull().default({}),
-  currency: text("currency").notNull().default("INR"),
-  timezone: text("timezone").notNull().default("Asia/Kolkata"),
-  financialYearStart: date("financial_year_start"),
-  ...timestamps,
+  name: varchar("name", { length: 255 }).notNull(),
+  gstin: varchar("gstin", { length: 15 }),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const businessMembers = pgTable(
-  "business_members",
-  {
-    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    role: text("role").notNull().default("owner"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.businessId, table.userId] }),
-  ],
-);
+export const businessMembers = pgTable("business_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessId: uuid("business_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  role: roleEnum("role").default("staff"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const customers = pgTable("customers", {
   id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  companyName: text("company_name"),
-  email: text("email"),
-  phone: text("phone"),
-  gstin: text("gstin"),
-  billingAddress: jsonb("billing_address").notNull().default({}),
-  shippingAddress: jsonb("shipping_address"),
-  openingBalance: numeric("opening_balance", { precision: 18, scale: 2 }).notNull().default("0"),
-  creditLimit: numeric("credit_limit", { precision: 18, scale: 2 }),
-  notes: text("notes"),
-  isActive: boolean("is_active").notNull().default(true),
-  ...timestamps,
+  businessId: uuid("business_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 20 }),
+  gstin: varchar("gstin", { length: 15 }),
+  openingBalance: numeric("opening_balance", { precision: 15, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const vendors = pgTable("vendors", {
+export const invoices = pgTable("invoices", {
   id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  companyName: text("company_name"),
-  email: text("email"),
-  phone: text("phone"),
-  gstin: text("gstin"),
-  openingBalance: numeric("opening_balance", { precision: 18, scale: 2 }).notNull().default("0"),
-  notes: text("notes"),
-  isActive: boolean("is_active").notNull().default(true),
-  ...timestamps,
+  businessId: uuid("business_id").notNull(),
+  customerId: uuid("customer_id").notNull(),
+  invoiceNumber: varchar("invoice_number", { length: 50 }).unique().notNull(),
+  invoiceDate: timestamp("invoice_date").notNull(),
+  dueDate: timestamp("due_date"),
+  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull(),
+  tax: numeric("tax", { precision: 15, scale: 2 }).default("0"),
+  discount: numeric("discount", { precision: 15, scale: 2 }).default("0"),
+  total: numeric("total", { precision: 15, scale: 2 }).notNull(),
+  paidAmount: numeric("paid_amount", { precision: 15, scale: 2 }).default("0"),
+  status: invoiceStatusEnum("status").default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-export const itemCategories = pgTable(
-  "item_categories",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    ...timestamps,
-  },
-  (table) => [unique().on(table.businessId, table.name)],
-);
-
-export const items = pgTable(
-  "items",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    categoryId: uuid("category_id").references(() => itemCategories.id, { onDelete: "set null" }),
-    sku: text("sku"),
-    name: text("name").notNull(),
-    itemType: text("item_type").notNull().default("product"),
-    unit: text("unit").notNull().default("pcs"),
-    sellingPrice: numeric("sale_price", { precision: 18, scale: 2 }).notNull().default("0"),
-    purchasePrice: numeric("purchase_price", { precision: 18, scale: 2 }).notNull().default("0"),
-    taxRate: numeric("tax_rate", { precision: 7, scale: 3 }).notNull().default("0"),
-    openingStock: numeric("opening_stock", { precision: 18, scale: 3 }).notNull().default("0"),
-    reorderLevel: numeric("reorder_level", { precision: 18, scale: 3 }),
-    isActive: boolean("is_active").notNull().default(true),
-    ...timestamps,
-  },
-  (table) => [unique().on(table.businessId, table.sku)],
-);
-
-export const invoices = pgTable(
-  "invoices",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
-    invoiceNumber: text("invoice_number").notNull(),
-    status: text("status").notNull().default("draft"),
-    issueDate: date("issue_date").notNull(),
-    dueDate: date("due_date"),
-    subtotal: numeric("subtotal", { precision: 18, scale: 2 }).notNull().default("0"),
-    discountTotal: numeric("discount_total", { precision: 18, scale: 2 }).notNull().default("0"),
-    taxTotal: numeric("tax_total", { precision: 18, scale: 2 }).notNull().default("0"),
-    total: numeric("total", { precision: 18, scale: 2 }).notNull().default("0"),
-    amountPaid: numeric("amount_paid", { precision: 18, scale: 2 }).notNull().default("0"),
-    notes: text("notes"),
-    ...timestamps,
-  },
-  (table) => [unique().on(table.businessId, table.invoiceNumber)],
-);
 
 export const invoiceItems = pgTable("invoice_items", {
   id: uuid("id").primaryKey().defaultRandom(),
-  invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
-  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  invoiceId: uuid("invoice_id").notNull(),
   description: text("description").notNull(),
-  quantity: numeric("quantity", { precision: 18, scale: 3 }).notNull(),
-  unitPrice: numeric("unit_price", { precision: 18, scale: 2 }).notNull(),
-  discount: numeric("discount", { precision: 18, scale: 2 }).notNull().default("0"),
-  taxRate: numeric("tax_rate", { precision: 7, scale: 3 }).notNull().default("0"),
-  lineTotal: numeric("line_total", { precision: 18, scale: 2 }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  quantity: integer("quantity").notNull(),
+  unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
 });
 
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
-  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
-  paymentDate: date("payment_date").notNull(),
-  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-  method: text("method").notNull(),
-  reference: text("reference"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  businessId: uuid("business_id").notNull(),
+  customerId: uuid("customer_id"),
+  invoiceId: uuid("invoice_id"),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
+  method: paymentMethodEnum("method"),
+  reference: varchar("reference", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const purchases = pgTable(
-  "purchases",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
-    purchaseNumber: text("purchase_number").notNull(),
-    status: text("status").notNull().default("draft"),
-    purchaseDate: date("purchase_date").notNull(),
-    dueDate: date("due_date"),
-    subtotal: numeric("subtotal", { precision: 18, scale: 2 }).notNull().default("0"),
-    discountTotal: numeric("discount_total", { precision: 18, scale: 2 }).notNull().default("0"),
-    taxTotal: numeric("tax_total", { precision: 18, scale: 2 }).notNull().default("0"),
-    total: numeric("total", { precision: 18, scale: 2 }).notNull().default("0"),
-    amountPaid: numeric("amount_paid", { precision: 18, scale: 2 }).notNull().default("0"),
-    notes: text("notes"),
-    ...timestamps,
-  },
-  (table) => [unique().on(table.businessId, table.purchaseNumber)],
-);
-
-export const purchaseItems = pgTable("purchase_items", {
+export const products = pgTable("products", {
   id: uuid("id").primaryKey().defaultRandom(),
-  purchaseId: uuid("purchase_id").notNull().references(() => purchases.id, { onDelete: "cascade" }),
-  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
-  description: text("description").notNull(),
-  quantity: numeric("quantity", { precision: 18, scale: 3 }).notNull(),
-  unitPrice: numeric("unit_price", { precision: 18, scale: 2 }).notNull(),
-  discount: numeric("discount", { precision: 18, scale: 2 }).notNull().default("0"),
-  taxRate: numeric("tax_rate", { precision: 7, scale: 3 }).notNull().default("0"),
-  lineTotal: numeric("line_total", { precision: 18, scale: 2 }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  businessId: uuid("business_id").notNull(),
+  sku: varchar("sku", { length: 100 }).unique().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }),
+  unit: varchar("unit", { length: 50 }).default("piece"),
+  sellingPrice: numeric("selling_price", { precision: 15, scale: 2 }).notNull(),
+  purchasePrice: numeric("purchase_price", { precision: 15, scale: 2 }),
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("18"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const inventory = pgTable("inventory", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessId: uuid("business_id").notNull(),
+  productId: uuid("product_id").notNull(),
+  quantity: integer("quantity").default(0),
+  reorderLevel: integer("reorder_level").default(0),
+  value: numeric("value", { precision: 15, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const inventoryTransactions = pgTable("inventory_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessId: uuid("business_id").notNull(),
+  productId: uuid("product_id").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  quantity: integer("quantity").notNull(),
+  previousQty: integer("previous_qty"),
+  newQty: integer("new_qty"),
+  reference: varchar("reference", { length: 100 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const expenses = pgTable("expenses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-  vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
-  expenseDate: date("expense_date").notNull(),
-  category: text("category").notNull(),
+  businessId: uuid("business_id").notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
+  vendor: varchar("vendor", { length: 255 }),
   description: text("description"),
-  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-  taxAmount: numeric("tax_amount", { precision: 18, scale: 2 }).notNull().default("0"),
-  paymentMethod: text("payment_method"),
-  reference: text("reference"),
-  ...timestamps,
+  date: timestamp("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const stockMovements = pgTable("stock_movements", {
+export const authRateLimits = pgTable("auth_rate_limits", {
   id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-  itemId: uuid("item_id").notNull().references(() => items.id, { onDelete: "restrict" }),
-  quantity: numeric("quantity", { precision: 18, scale: 3 }).notNull(),
-  movementType: text("movement_type").notNull(),
-  referenceId: uuid("reference_id"),
-  referenceType: text("reference_type"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  key: varchar("key", { length: 255 }).unique(),
+  attempts: integer("attempts").default(0),
+  windowStartedAt: timestamp("window_started_at"),
 });
 
-export const auditLogs = pgTable("audit_logs", {
+export const auditLog = pgTable("audit_log", {
   id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").references(() => businesses.id, { onDelete: "set null" }),
-  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  action: text("action").notNull(),
-  entityType: text("entity_type").notNull(),
-  entityId: text("entity_id"),
-  metadata: jsonb("metadata").notNull().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  title: text("title").notNull(),
-  body: text("body"),
-  data: jsonb("data").notNull().default({}),
-  readAt: timestamp("read_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  businessId: uuid("business_id").notNull(),
+  userId: uuid("user_id"),
+  action: varchar("action", { length: 100 }).notNull(),
+  entityType: varchar("entity_type", { length: 50 }),
+  entityId: uuid("entity_id"),
+  previousState: text("previous_state"),
+  nextState: text("next_state"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
