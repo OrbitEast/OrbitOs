@@ -6,9 +6,9 @@ This file defines **execution order and verification gates**. The product requir
 
 **Repository baseline:** Next.js/React/TypeScript foundation; real business functionality is not yet implemented.
 
-**Current phase:** Phase 0 — Audit
+**Current phase:** Phase 1 — Foundation
 
-**Phase 0 baseline check:** Completed against `main` on 2026-10-03. Any coding agent must repeat the audit locally before modifying code because local worktrees may differ.
+**Phase 0 baseline check:** Completed against `main` on 2026-10-03. Live Supabase project was also inspected: the database already contains the business, customer, vendor, item, invoice, payment, expense, stock, procurement, accounting, audit, and RLS foundations. The application repository is now being reconciled against that live schema instead of recreating it blindly.
 
 **Important:** Status labels are evidence-based only. Do not mark a phase complete because files or routes exist.
 
@@ -45,7 +45,7 @@ Record:
 ---
 
 ## Phase 1 — FOUNDATION
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
 
 Implement and verify:
 
@@ -61,6 +61,13 @@ Implement and verify:
 **Exit gate:** application builds; database connection works; migrations can be applied; no secrets are committed.
 
 ---
+
+### Phase 1 implementation notes
+
+- The live Supabase database is the existing backend target for OrbitOS.
+- The current physical schema uses `items` and `vendors`; the application may expose the domain concepts as products and suppliers without creating duplicate tables.
+- Existing RLS and RPC security must be preserved and verified before feature work depends on them.
+- Security Advisor currently reports five callable `SECURITY DEFINER` functions and leaked-password protection disabled; these are hardening items, not reasons to recreate the database.
 
 ## Phase 2 — AUTH + BUSINESS TENANCY
 **Status:** NOT STARTED
