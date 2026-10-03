@@ -10,6 +10,96 @@
 
 ---
 
+# AI EXECUTION CONTRACT
+
+This document is the canonical product specification for OrbitOS. It is written so an autonomous coding agent can inspect the repository, determine the current state, implement the required system, and verify completion without inventing missing requirements.
+
+## Source of truth
+
+Use this authority order when deciding what to do:
+
+1. Security and data-integrity requirements in this document.
+2. Working source code and committed database migrations.
+3. This master plan's canonical technical contract.
+4. `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/SECURITY.md`, `docs/DESIGN-SYSTEM.md`, and `docs/TESTING.md`.
+5. `docs/DEVELOPMENT_ROADMAP.md` for execution sequencing and status.
+
+Never resolve a documentation conflict by silently creating two competing architectures.
+
+## Canonical tenant terminology
+
+OrbitOS has one tenant concept:
+
+- **Product/UI term:** Business
+- **Database table:** `businesses`
+- **Membership table:** `business_members`
+- **Tenant foreign key:** `business_id`
+
+The word "organization" may appear in older requirements as a conceptual term. Do not create a parallel `businesses` model merely to follow that wording. Use the canonical Business model above unless a documented architecture decision changes it.
+
+## Repository baseline
+
+At the time this specification was normalized, the repository was a Next.js/React/TypeScript foundation with Drizzle, PostgreSQL connectivity packages, Auth.js/NextAuth, and Zod. The actual `package.json` is authoritative for dependency versions. Do not hard-code an old framework version from documentation when the repository has moved forward.
+
+## Current implementation truth
+
+Before implementation, inspect the actual tree and classify every major area as:
+
+```
+IMPLEMENTED
+PARTIAL
+PLANNED
+MISSING
+BROKEN
+UNUSED
+```
+
+Do not infer implementation from route names, documentation, or placeholder components. Verify the actual behavior.
+
+## Required agent behavior
+
+For every phase:
+
+```
+AUDIT CURRENT STATE
+      ↓
+DEFINE COHERENT SLICE
+      ↓
+IMPLEMENT REAL FUNCTIONALITY
+      ↓
+RUN TYPECHECK / LINT / TESTS / BUILD AS APPLICABLE
+      ↓
+FIX FAILURES
+      ↓
+VERIFY ACCEPTANCE CRITERIA
+      ↓
+UPDATE DOCUMENTATION / STATUS
+      ↓
+CONTINUE
+```
+
+Do not stop at UI scaffolding. A feature is not complete until its data path, validation, authorization, persistence, error handling, and relevant tests are working.
+
+## Autonomy rule
+
+Do not repeatedly ask for approval for ordinary engineering choices. Make the safest repository-consistent decision and document it. Ask the user only when an external secret/credential, an irreversible product decision, or a genuinely unresolvable requirement is required.
+
+## Evidence rule
+
+Never mark a feature complete because code was written. Completion requires observable evidence such as passing tests, successful typecheck/build, verified database behavior, or a documented manual verification step where automation is not practical.
+
+## No fake completeness
+
+Never create static values, hard-coded metrics, fake authentication, simulated payments, fake search, fake reports, or placeholder actions and represent them as functional. Clearly label unavailable functionality until it is actually implemented.
+
+## Documentation synchronization
+
+When architecture, schema, security, or deployment decisions change, update the affected canonical documentation in the same implementation slice. Keep the master plan, architecture, database, security, design, testing, and roadmap documents consistent.
+
+---
+
+---
+
 # 1. ROLE
 
 You are the primary software engineer responsible for completing the OrbitOS repository.
@@ -165,23 +255,23 @@ lib/
 
 Supabase PostgreSQL should be the production database.
 
-If the existing Drizzle architecture is usable:
+Use the existing Drizzle architecture as the ORM/schema/migration layer:
 
 ```text
-Next.js
+Next.js App Router
+   ↓
+Server Action / Route Handler
+   ↓
+Domain / Service layer
    ↓
 Drizzle
    ↓
 Supabase PostgreSQL
 ```
 
-Continue using it.
+Do NOT introduce a second ORM or a competing persistence layer.
 
-Do NOT introduce a second ORM unnecessarily.
-
-Do NOT maintain two competing database systems.
-
-Drizzle should remain the schema/migration layer if it is already integrated correctly.
+Drizzle remains the schema and migration layer unless repository evidence shows it is technically unusable. If a major replacement is necessary, document the reason and migration path before proceeding.
 
 ---
 
@@ -207,7 +297,7 @@ invoices/
 
 Storage must be isolated by organization/business.
 
-A user from Organization A must not be able to access Organization B's files.
+A user from Business A must not be able to access Business B's files.
 
 Never expose unrestricted storage buckets containing private business data.
 
@@ -355,22 +445,22 @@ User
   ↓
 Organization
   ↓
-Organization Membership
+Business Membership
   ↓
 Business Data
 ```
 
-A user may belong to one or more organizations.
+A user may belong to one or more businesses.
 
-Every organization-owned record must be associated with an organization.
+Every business-owned record must be associated with an organization.
 
 Example:
 
 ```text
-customers.organization_id
-products.organization_id
-invoices.organization_id
-expenses.organization_id
+customers.business_id
+products.business_id
+invoices.business_id
+expenses.business_id
 ```
 
 etc.
@@ -381,7 +471,7 @@ etc.
 
 This is a critical security requirement.
 
-A user must NEVER be able to access another organization's:
+A user must NEVER be able to access another business's:
 
 * customers
 * suppliers
@@ -399,11 +489,11 @@ Do not rely only on frontend filtering.
 
 Authorization must be enforced server-side.
 
-If using Supabase directly from client-side code, implement appropriate Row Level Security.
+Server-side authentication, business membership, and permission checks are mandatory for every business-scoped operation.
 
-If using server-side Drizzle queries, enforce organization membership in the service/server layer.
+If any business data is exposed directly through Supabase client access, Row Level Security is mandatory for that exposed surface.
 
-Prefer defense in depth where practical.
+When the primary path is server-side Drizzle, keep authorization in the server/service layer and use RLS as defense in depth where practical. Never rely on frontend filtering.
 
 ---
 
@@ -695,7 +785,7 @@ Fields:
 
 ```text
 id
-organization_id
+business_id
 name
 phone
 email
@@ -1182,7 +1272,7 @@ User changed business settings
 Fields:
 
 ```text
-organization_id
+business_id
 user_id
 action
 entity
@@ -1389,8 +1479,8 @@ users
 accounts
 sessions
 
-organizations
-organization_members
+businesses
+business_members
 
 roles
 permissions
@@ -1438,7 +1528,7 @@ Add appropriate indexes for common queries.
 At minimum consider:
 
 ```text
-organization_id
+business_id
 customer_id
 supplier_id
 product_id
@@ -1529,7 +1619,7 @@ Zod Validation
  ↓
 Authentication
  ↓
-Organization Membership
+Business Membership
  ↓
 Permission Check
  ↓
@@ -1745,7 +1835,7 @@ Audit logging
 Never trust client-provided:
 
 ```text
-organization_id
+business_id
 user_id
 role
 permission
@@ -2305,7 +2395,7 @@ Implement in this order.
 
 ## PHASE 0 — AUDIT
 
-Inspect everything.
+Inspect everything before changing architecture or creating large amounts of code.
 
 Deliver internally:
 
@@ -2642,7 +2732,7 @@ The project is complete only when:
 The following scenario must work end-to-end:
 
 ```text
-Create organization
+Create business
         ↓
 Create customer: Rahul
         ↓
@@ -2769,7 +2859,9 @@ Do not stop after creating the UI.
 
 Do not stop after creating database tables.
 
-Continue until the Definition of Done is satisfied.
+Do not stop after creating individual routes without wiring their business flows.
+
+Continue until the Definition of Done is satisfied and the critical business test passes.
 
 ---
 
