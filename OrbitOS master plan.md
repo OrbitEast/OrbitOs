@@ -35,7 +35,7 @@ OrbitOS has one tenant concept:
 - **Membership table:** `business_members`
 - **Tenant foreign key:** `business_id`
 
-The word "organization" may appear in older requirements as a conceptual term. Do not create a parallel `businesses` model merely to follow that wording. Use the canonical Business model above unless a documented architecture decision changes it.
+Older documentation may use "organization" as a conceptual term. In OrbitOS, the tenant is Business; use `businesses`, `business_members`, and `business_id`. Do not create a second tenant model.
 
 ## Repository baseline
 
@@ -295,7 +295,7 @@ invoices/
     attachments/
 ```
 
-Storage must be isolated by organization/business.
+Storage must be isolated by business.
 
 A user from Business A must not be able to access Business B's files.
 
@@ -443,7 +443,7 @@ Architecture:
 ```text
 User
   ↓
-Organization
+Business
   ↓
 Business Membership
   ↓
@@ -452,7 +452,7 @@ Business Data
 
 A user may belong to one or more businesses.
 
-Every business-owned record must be associated with an organization.
+Every business-owned record must be associated with a business.
 
 Example:
 
@@ -577,14 +577,14 @@ GSTIN should be optional.
 
 ---
 
-# 15. ORGANIZATION MEMBERS
+# 15. BUSINESS MEMBERS
 
 A business owner can invite/manage staff.
 
 Structure:
 
 ```text
-Organization
+Business
     ↓
 Members
     ↓
@@ -996,7 +996,7 @@ Record Payment
 Cancel
 ```
 
-Invoice numbers must be unique per organization according to the configured numbering strategy.
+Invoice numbers must be unique per business according to the configured numbering strategy.
 
 ---
 
@@ -1346,7 +1346,7 @@ PAYMENTS
 ₹5,000 payment
 ```
 
-Search only within the user's authorized organization.
+Search only within the user's authorized business.
 
 ---
 
@@ -1548,7 +1548,7 @@ Use proper relationships.
 Examples:
 
 ```text
-invoice → organization
+invoice → business
 invoice → customer
 invoice_item → invoice
 invoice_item → product
@@ -1760,7 +1760,7 @@ Requirements:
 * validate file type
 * validate file size
 * generate safe paths
-* enforce organization ownership
+* enforce business ownership
 * avoid exposing private files publicly unless intentionally required
 
 ---
@@ -1779,7 +1779,7 @@ Transactions CSV
 
 where useful.
 
-Export must respect organization permissions.
+Export must respect business permissions.
 
 ---
 
@@ -1940,7 +1940,7 @@ Each tool must enforce:
 
 ```text
 authenticated user
-organization membership
+business membership
 permissions
 ```
 
@@ -2042,7 +2042,7 @@ Create development seed data.
 Example:
 
 ```text
-1 organization
+1 business
 5 customers
 3 suppliers
 20 products
@@ -2422,12 +2422,12 @@ Supabase PostgreSQL
 migrations
 environment configuration
 authentication foundation
-organization architecture
+business tenancy architecture
 ```
 
 ---
 
-## PHASE 2 — AUTH + ORGANIZATION
+## PHASE 2 — AUTH + BUSINESS TENANCY
 
 Implement:
 
@@ -2438,7 +2438,7 @@ Google OAuth
 sessions
 password reset
 business creation
-organization membership
+business membership
 tenant isolation
 ```
 
@@ -2575,7 +2575,7 @@ Implement:
 staff
 roles
 permissions
-organization management
+business management
 audit logs
 security checks
 ```
@@ -2695,7 +2695,7 @@ The project is complete only when:
 ✓ Users can register
 ✓ Users can log in
 ✓ Users can create a business
-✓ Organizations are isolated
+✓ Businesses are isolated
 ✓ Customers work
 ✓ Suppliers work
 ✓ Products work
