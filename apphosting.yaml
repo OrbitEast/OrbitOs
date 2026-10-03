@@ -1,9 +1,0 @@
-# OrbitOS currently keeps the existing *.web.app URL through
-# Firebase Hosting -> Cloud Run. This file is intentionally minimal so
-# the repository can also be connected to Firebase App Hosting later.
-env:
-  - variable: NEXT_PUBLIC_APP_URL
-    value: https://orbitos-3cb9c.web.app
-    availability:
-      - BUILD
-      - RUNTIME
