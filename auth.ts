@@ -9,6 +9,7 @@ import { consumeAuthRateLimit } from "@/lib/auth/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(getDb()),
+  trustHost: true,
   session: { strategy: "jwt" },
   providers: [
     Credentials({
